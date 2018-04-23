@@ -17,7 +17,7 @@
 """Authors: aneelakantan (Arvind Neelakantan), pramodkaushik (Pramod Kaushik Mudrakarta)
 """
 
-from __future__ import print_function
+
 
 import numpy as np
 import tensorflow as tf
@@ -548,11 +548,15 @@ class Graph():
     select = select * self.select_whole_mask
     self.batch_log_prob = tf.zeros([self.batch_size], dtype=self.data_type)
     #Perform max_passes and at each  pass select operation and column
+    all_operator_softmax = []
+    all_column_softmax = []
     for curr_pass in range(max_passes):
       print("step: ", curr_pass)
       output, select, softmax, soft_softmax, column_softmax, soft_column_softmax = self.one_pass(
           select, question_embedding, hidden_vectors, hprev, prev_select_1,
           curr_pass)
+      all_operator_softmax.append(tf.expand_dims(soft_softmax, 1))
+      all_column_softmax.append(tf.expand_dims(soft_column_softmax, 1))
       prev_select_1 = select
       #compute input to history RNN
       input_op = tf.transpose(
@@ -577,7 +581,9 @@ class Graph():
     error = error / batch_size
     total_error = tf.reduce_sum(error)
     total_correct = correct / batch_size
-    return total_error, total_correct
+    all_operator_softmax = tf.concat(all_operator_softmax, axis=1)# shape: (batch_size, max_passes, num_operators)
+    all_column_softmax = tf.concat(all_column_softmax, axis=1) # shape: (batch_size, max_passes, num_columns)
+    return total_error, total_correct, all_operator_softmax, all_column_softmax, correct_add
 
   def compute_error(self):
     #Sets mask variables and performs batch processing
@@ -629,7 +635,7 @@ class Graph():
     self.num_entries = tf.reshape(
         tf.reduce_sum(tf.reduce_sum(self.select_full_mask, 1), 1),
         [self.batch_size])
-    self.final_error, self.final_correct = self.batch_process()
+    self.final_error, self.final_correct, self.final_operation_softmax, self.final_column_softmax, self.final_correct_list = self.batch_process()
     return self.final_error
 
   def create_graph(self, params, global_step):
@@ -638,12 +644,12 @@ class Graph():
     batch_size = self.batch_size
     learning_rate = tf.cast(self.utility.FLAGS.learning_rate, self.data_type)
     self.total_cost = self.compute_error()
-    optimize_params = self.params.values()
-    optimize_names = self.params.keys()
+    optimize_params = list(self.params.values())
+    optimize_names = list(self.params.keys())
     print("optimize params ", optimize_names)
     if (self.utility.FLAGS.l2_regularizer > 0.0):
       reg_cost = 0.0
-      for ind_param in self.params.keys():
+      for ind_param in list(self.params.keys()):
         reg_cost += tf.nn.l2_loss(self.params[ind_param])
       self.total_cost += self.utility.FLAGS.l2_regularizer * reg_cost
     grads = tf.gradients(self.total_cost, optimize_params, name="gradients")
@@ -670,12 +676,12 @@ class Graph():
         clipped_grads.append(p)
     grads = clipped_grads
     self.global_step = global_step
-    params_list = self.params.values()
+    params_list = list(self.params.values())
     params_list.append(self.global_step)
     adam = tf.train.AdamOptimizer(
         learning_rate,
         epsilon=tf.cast(self.utility.FLAGS.eps, self.data_type),
         use_locking=True)
-    self.step = adam.apply_gradients(zip(grads, optimize_params),
+    self.step = adam.apply_gradients(list(zip(grads, optimize_params)),
 					global_step=self.global_step)
     self.init_op = tf.global_variables_initializer()

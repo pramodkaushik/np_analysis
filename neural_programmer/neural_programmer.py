@@ -18,66 +18,71 @@ This file calls functions to load & pre-process data, construct the TF graph
 and performs training or evaluation as specified by the flag evaluator_job
 Author: aneelakantan (Arvind Neelakantan)
 """
-from __future__ import print_function
+
 
 import time
 from random import Random
 import numpy as np
 import tensorflow as tf
 import model
+import sys
 import wiki_data
 import parameters
 import data_utils
 
-tf.flags.DEFINE_integer("train_steps", 100001, "Number of steps to train")
-tf.flags.DEFINE_integer("eval_cycle", 500,
+flags = tf.app.flags
+FLAGS = flags.FLAGS
+flags.DEFINE_integer("train_steps", 100001, "Number of steps to train")
+flags.DEFINE_integer("eval_cycle", 500,
                         "Evaluate model at every eval_cycle steps")
-tf.flags.DEFINE_integer("max_elements", 100,
+flags.DEFINE_integer("max_elements", 100,
                         "maximum rows that are  considered for processing")
-tf.flags.DEFINE_integer(
+flags.DEFINE_integer(
     "max_number_cols", 15,
     "maximum number columns that are considered for processing")
-tf.flags.DEFINE_integer(
+flags.DEFINE_integer(
     "max_word_cols", 25,
     "maximum number columns that are considered for processing")
-tf.flags.DEFINE_integer("question_length", 62, "maximum question length")
-tf.flags.DEFINE_integer("max_entry_length", 1, "")
-tf.flags.DEFINE_integer("max_passes", 4, "number of operation passes")
-tf.flags.DEFINE_integer("embedding_dims", 256, "")
-tf.flags.DEFINE_integer("batch_size", 20, "")
-tf.flags.DEFINE_float("clip_gradients", 1.0, "")
-tf.flags.DEFINE_float("eps", 1e-6, "")
-tf.flags.DEFINE_float("param_init", 0.1, "")
-tf.flags.DEFINE_float("learning_rate", 0.001, "")
-tf.flags.DEFINE_float("l2_regularizer", 0.0001, "")
-tf.flags.DEFINE_float("print_cost", 50.0,
+flags.DEFINE_integer("question_length", 62, "maximum question length")
+flags.DEFINE_integer("max_entry_length", 1, "")
+flags.DEFINE_integer("max_passes", 4, "number of operation passes")
+flags.DEFINE_integer("embedding_dims", 256, "")
+flags.DEFINE_integer("batch_size", 20, "")
+flags.DEFINE_float("clip_gradients", 1.0, "")
+flags.DEFINE_float("eps", 1e-6, "")
+flags.DEFINE_float("param_init", 0.1, "")
+flags.DEFINE_float("learning_rate", 0.001, "")
+flags.DEFINE_float("l2_regularizer", 0.0001, "")
+flags.DEFINE_float("print_cost", 50.0,
                       "weighting factor in the objective function")
-tf.flags.DEFINE_string("job_id", "temp", """job id""")
-tf.flags.DEFINE_string("output_dir", "../model/",
+flags.DEFINE_string("job_id", "temp", """job id""")
+flags.DEFINE_string("output_dir", "../model/",
                        """output_dir""")
-tf.flags.DEFINE_string("data_dir", "../data/",
+flags.DEFINE_string("data_dir", "../data/",
                        """data_dir""")
-tf.flags.DEFINE_integer("write_every", 500, "wrtie every N")
-tf.flags.DEFINE_integer("param_seed", 150, "")
-tf.flags.DEFINE_integer("python_seed", 200, "")
-tf.flags.DEFINE_float("dropout", 0.8, "dropout keep probability")
-tf.flags.DEFINE_float("rnn_dropout", 0.9,
+flags.DEFINE_integer("write_every", 500, "wrtie every N")
+flags.DEFINE_integer("param_seed", 150, "")
+flags.DEFINE_integer("python_seed", 200, "")
+flags.DEFINE_float("dropout", 0.8, "dropout keep probability")
+flags.DEFINE_float("rnn_dropout", 0.9,
                       "dropout keep probability for rnn connections")
-tf.flags.DEFINE_float("pad_int", -20000.0,
+flags.DEFINE_float("pad_int", -20000.0,
                       "number columns are padded with pad_int")
-tf.flags.DEFINE_string("data_type", "double", "float or double")
-tf.flags.DEFINE_float("word_dropout_prob", 0.9, "word dropout keep prob")
-tf.flags.DEFINE_integer("word_cutoff", 10, "")
-tf.flags.DEFINE_integer("vocab_size", 10800, "")
-tf.flags.DEFINE_boolean("evaluator_job", False,
+flags.DEFINE_string("data_type", "double", "float or double")
+flags.DEFINE_float("word_dropout_prob", 0.9, "word dropout keep prob")
+flags.DEFINE_integer("word_cutoff", 10, "")
+flags.DEFINE_integer("vocab_size", 10800, "")
+flags.DEFINE_boolean("evaluator_job", False,
                         "wehther to run as trainer/evaluator")
-tf.flags.DEFINE_float(
+flags.DEFINE_float(
     "bad_number_pre_process", -200000.0,
     "number that is added to a corrupted table entry in a number column")
-tf.flags.DEFINE_float("max_math_error", 3.0,
+flags.DEFINE_float("max_math_error", 3.0,
                       "max square loss error that is considered")
-tf.flags.DEFINE_float("soft_min_value", 5.0, "")
-FLAGS = tf.flags.FLAGS
+flags.DEFINE_float("soft_min_value", 5.0, "")
+FLAGS = flags.FLAGS
+remaining_args = FLAGS([sys.argv[0]] + [flag for flag in sys.argv if flag.startswith("--")])
+assert(remaining_args == [sys.argv[0]])
 
 
 class Utility:
@@ -182,7 +187,7 @@ def master(train_data, dev_data, utility):
           model_step = int(
               model_file.split("_")[len(model_file.split("_")) - 1])
           selected_models[model_step] = model_file
-        file_list = sorted(selected_models.items(), key=lambda x: x[0])
+        file_list = sorted(list(selected_models.items()), key=lambda x: x[0])
         if (len(file_list) > 0):
           file_list = file_list[0:len(file_list) - 1]
         print("list of models: ", file_list)
