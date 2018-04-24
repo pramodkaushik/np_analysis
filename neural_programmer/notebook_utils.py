@@ -67,3 +67,32 @@ def restore_model(sess, graph, params, model_file):
     saver = tf.train.Saver(to_save, max_to_keep=500)
     saver.restore(sess, model_file)
     return sess, graph
+
+
+def softmax_to_names(softmax, names):
+    """Returns the names of the highest probability operator per stage in 'softmax'"""
+    ids = [np.asscalar(np.argmax(softmax[stage,:])) for stage in range(softmax.shape[0])]
+    #return [names[idx] + '(' + str(round(softmax[stage,idx],3)) + ')' for stage, idx in enumerate(ids)]
+    return [names[idx] for idx in ids]
+
+
+def get_column_names(wiki_example):
+    """Returns the column names as a list"""
+    ans = wiki_example.column_names + wiki_example.word_column_names
+    ans = [' '.join([str(w) for w in s]) for s in ans]
+    return ans
+
+rename_dict = {
+    'entry_match': 'tm_token',
+    'column_match': 'cm_token',
+    'first_rs': 'first',
+    'last_rs': 'last',
+    'group_by_max': 'mfe',
+    'word-match': 'select',
+    'reset_select': 'reset'
+}
+
+def rename(word):
+    if word in rename_dict:
+        return rename_dict[word]
+    return word

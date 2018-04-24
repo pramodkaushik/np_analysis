@@ -96,6 +96,9 @@ class Graph():
     self.batch_ordinal_question_one = tf.placeholder(
         self.data_type, [batch_size, self.question_length])
 
+    self.op_ids = tf.placeholder(tf.int32, [self.max_passes])
+    self.col_ids = tf.placeholder(tf.int32, [self.max_passes])
+  
   def LSTM_question_embedding(self, sentence, sentence_length):
     #LSTM processes the input question
     lstm_params = "question_lstm"
@@ -114,10 +117,13 @@ class Graph():
             self.data_type) / self.utility.FLAGS.rnn_dropout
       else:
         rnn_dropout_mask = tf.ones_like(question_hidden)
+    self.question_words_embeddings = []
     for question_iterator in range(self.question_length):
       curr_word = sentence[:, question_iterator]
+      curr_word_embedding = nn_utils.get_embedding(curr_word, self.utility, self.params)
+      self.question_words_embeddings.append(curr_word_embedding)
       question_vector = nn_utils.apply_dropout(
-          nn_utils.get_embedding(curr_word, self.utility, self.params),
+          curr_word_embedding,
           self.utility.FLAGS.dropout, self.mode)
       question_hidden, question_c_hidden = nn_utils.LSTMCell(
           question_vector, question_hidden, question_c_hidden, lstm_params,
@@ -636,6 +642,67 @@ class Graph():
         tf.reduce_sum(tf.reduce_sum(self.select_full_mask, 1), 1),
         [self.batch_size])
     self.final_error, self.final_correct, self.final_operation_softmax, self.final_column_softmax, self.final_correct_list = self.batch_process()
+
+    ## Integrated Gradients (IG):
+    # Compute gradients assuming that the batch contains scaled versions of the same WikiExample
+    # shape of final_operation_softmax : batch_size x max_passes x num_operations
+    operator_gradients = []
+    column_gradients = []
+    for stage in range(self.max_passes):
+      operator_gradients.append(
+          tf.gradients(
+              self.final_operation_softmax[:, stage, self.op_ids[stage]],
+              self.question_words_embeddings))
+      operator_gradients.append(
+          tf.gradients(
+              self.final_operation_softmax[:, stage, self.op_ids[stage]],
+              self.batch_exact_match))
+      operator_gradients.append(
+          tf.gradients(
+              self.final_operation_softmax[:, stage, self.op_ids[stage]],
+              self.batch_column_exact_match))
+
+
+      column_gradients.append(
+          tf.gradients(
+              self.final_column_softmax[:, stage, self.col_ids[stage]],
+              self.question_words_embeddings))
+      column_gradients.append(
+          tf.gradients(
+              self.final_column_softmax[:, stage, self.col_ids[stage]],
+              self.batch_exact_match))
+      column_gradients.append(
+          tf.gradients(
+              self.final_column_softmax[:, stage, self.col_ids[stage]],
+              self.batch_column_exact_match))
+
+    self.operator_gradients = operator_gradients 
+    self.column_gradients = column_gradients
+
+    operator_gradients_default_program = []
+    column_gradients_default_program = []
+    for stage in range(self.max_passes):
+      operator_gradients_default_program.append(
+          tf.gradients(
+              self.final_operation_softmax[:, stage, self.op_ids[stage]],
+              self.column_hidden_vectors))
+      operator_gradients_default_program.append(
+          tf.gradients(
+              self.final_operation_softmax[:, stage, self.op_ids[stage]],
+              self.word_column_hidden_vectors))
+
+      column_gradients_default_program.append(
+          tf.gradients(
+              self.final_column_softmax[:, stage, self.col_ids[stage]],
+              self.column_hidden_vectors))
+      column_gradients_default_program.append(
+          tf.gradients(
+              self.final_column_softmax[:, stage, self.col_ids[stage]],
+              self.word_column_hidden_vectors))
+
+    self.operator_gradients_default_program = operator_gradients_default_program
+    self.column_gradients_default_program = column_gradients_default_program
+
     return self.final_error
 
   def create_graph(self, params, global_step):
