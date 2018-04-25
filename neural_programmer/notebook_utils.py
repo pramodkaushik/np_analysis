@@ -16,7 +16,7 @@ import autoreload
 import wiki_data, data_utils, parameters, model
 
 from random import shuffle
-from neural_programmer import Utility
+from neural_programmer import Utility, evaluate
 
 def init_data(data_dir):
     """ Load WikiTableQuestions data """
@@ -96,3 +96,24 @@ def rename(word):
     if word in rename_dict:
         return rename_dict[word]
     return word
+
+def process_table_key(key):
+    return re.sub(r'csv/([0-9]*)-csv/([0-9]*).csv', r'\1_\2', key)
+
+def evaluate_concatenation_attack(sess, data, batch_size, graph, model_step, utility, phrase, suffix=False):
+    ids = [utility.word_ids[w] if w in utility.word_ids else utility.word_ids[utility.unk_token] for w in phrase.split()]
+    print(ids)
+    new_data = copy.deepcopy(data)
+    for i, wiki_example in enumerate(new_data):
+        question_begin = np.nonzero(
+            wiki_example.question_attention_mask)[0].shape[0]
+        if suffix:
+            new_data[i].question.extend(ids)
+            new_data[i].question = new_data[i].question[len(ids):]
+
+            new_data[i].question_attention_mask.extend([0] * len(ids))
+            new_data[i].question_attention_mask = new_data[i].question_attention_mask[len(ids):]
+        else:
+            new_data[i].question[question_begin-len(ids):question_begin] = ids
+            new_data[i].question_attention_mask[question_begin-len(ids):question_begin] = [0] * len(ids)
+    return evaluate(sess, new_data, batch_size, graph, model_step)

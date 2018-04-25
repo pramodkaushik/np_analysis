@@ -294,8 +294,9 @@ class WikiQuestionGenerator(object):
     for line in f:
       if (counter > 0):
         line = line.strip()
+        line = line + "\t"*(11 - len(line.split("\t")))
         (question_id, utterance, context, target_value, tokens, lemma_tokens,
-         pos_tags, ner_tags, ner_values, target_canon) = line.split("\t")
+         pos_tags, ner_tags, ner_values, target_canon, target_canon_type) = line.split("\t")
         question = self.pre_process_sentence(tokens, ner_tags, ner_values)
         target_canon = target_canon.split("|")
         self.annotated_examples[question_id] = WikiExample(
@@ -332,9 +333,9 @@ class WikiQuestionGenerator(object):
       for line in f:
         if (counter > 0):
           line = line.strip()
-          line = line + "\t" * (13 - len(line.split("\t")))
+          line = line + "\t" * (14 - len(line.split("\t")))
           (row, col, read_id, content, tokens, lemma_tokens, pos_tags, ner_tags,
-           ner_values, number, date, num2, read_list) = line.split("\t")
+           ner_values, number, date, num2, read_list, read_list_id) = line.split("\t")
         counter += 1
       f.close()
       max_row = int(row)
@@ -352,9 +353,9 @@ class WikiQuestionGenerator(object):
       for line in f:
         if (counter > 0):
           line = line.strip()
-          line = line + "\t" * (13 - len(line.split("\t")))
+          line = line + "\t" * (14 - len(line.split("\t")))
           (row, col, read_id, content, tokens, lemma_tokens, pos_tags, ner_tags,
-           ner_values, number, date, num2, read_list) = line.split("\t")
+           ner_values, number, date, num2, read_list, read_list_id) = line.split("\t")
           entry = self.pre_process_sentence(tokens, ner_tags, ner_values)
           if (row == "-1"):
             column_names.append(entry)
@@ -429,7 +430,7 @@ class WikiQuestionGenerator(object):
         line = line.strip()
         if (not (line.split("\t")[0] in self.annotated_examples)):
           continue
-        if (len(line.split("\t")) == 4):
+        if (len(line.split("\t")) <= 4):
           line = line + "\t" * (5 - len(line.split("\t")))
           if (not (is_number(line.split("\t")[2]))):
             ice_bad_questions += 1

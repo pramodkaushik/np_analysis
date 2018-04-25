@@ -29,6 +29,7 @@ import sys
 import wiki_data
 import parameters
 import data_utils
+from collections import defaultdict
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -110,19 +111,27 @@ class Utility:
     self.random = Random(FLAGS.python_seed)
 
 
-def evaluate(sess, data, batch_size, graph, i):
+def evaluate(sess, data, batch_size, graph, model_step):
   #computes accuracy
-  num_examples = 0.0
-  gc = 0.0
+  correct_dict = defaultdict(lambda : True)
   for j in range(0, len(data) - batch_size + 1, batch_size):
-    [ct] = sess.run([graph.final_correct],
-                    feed_dict=data_utils.generate_feed_dict(data, j, batch_size,
-                                                            graph))
-    gc += ct * batch_size
-    num_examples += batch_size
-  print("dev set accuracy   after ", i, " : ", gc / num_examples)
+    [correct_list] = sess.run([graph.final_correct_list],
+                    feed_dict=data_utils.generate_feed_dict(data, j, batch_size, graph))
+    for i, cl in enumerate(correct_list):
+        correct_dict[data[j+i].question_id] = correct_dict[data[j+i].question_id] and (cl > 0)
+
+  # cover the last few examples not in the last batch of the above loop
+  j = len(data) - batch_size 
+  [correct_list] = sess.run([graph.final_correct_list], feed_dict=data_utils.generate_feed_dict(data, j, batch_size, graph))
+  for i, cl in enumerate(correct_list):
+      correct_dict[data[j+i].question_id] = correct_dict[data[j+i].question_id] and (cl > 0)
+
+  gc = sum(correct_dict.values())
+  num_examples = len(correct_dict.keys())
+  print("dev set accuracy   after ", model_step, " : ", gc / num_examples)
   print(num_examples, len(data))
   print("--------")
+  return gc, num_examples
 
 
 def Train(graph, utility, batch_size, train_data, sess, model_dir,
