@@ -24,11 +24,8 @@ import time
 from random import Random
 import numpy as np
 import tensorflow as tf
-import model
+import model, wiki_data, parameters, data_utils
 import sys
-import wiki_data
-import parameters
-import data_utils
 from collections import defaultdict
 
 flags = tf.app.flags
@@ -118,20 +115,20 @@ def evaluate(sess, data, batch_size, graph, model_step):
     [correct_list] = sess.run([graph.final_correct_list],
                     feed_dict=data_utils.generate_feed_dict(data, j, batch_size, graph))
     for i, cl in enumerate(correct_list):
-        correct_dict[data[j+i].question_id] = correct_dict[data[j+i].question_id] and (cl > 0)
+        correct_dict[data[j+i].question_id.split('_')[0]] = correct_dict[data[j+i].question_id.split('_')[0]] and (cl > 0)
 
   # cover the last few examples not in the last batch of the above loop
   j = len(data) - batch_size 
   [correct_list] = sess.run([graph.final_correct_list], feed_dict=data_utils.generate_feed_dict(data, j, batch_size, graph))
   for i, cl in enumerate(correct_list):
-      correct_dict[data[j+i].question_id] = correct_dict[data[j+i].question_id] and (cl > 0)
+      correct_dict[data[j+i].question_id.split('_')[0]] = correct_dict[data[j+i].question_id.split('_')[0]] and (cl > 0)
 
   gc = sum(correct_dict.values())
-  num_examples = len(correct_dict.keys())
-  print("dev set accuracy   after ", model_step, " : ", gc / num_examples)
-  print(num_examples, len(data))
+  num_examples = len(list(correct_dict.keys()))
+  print(("dev set accuracy   after ", model_step, " : ", gc / num_examples))
+  print((num_examples, len(data)))
   print("--------")
-  return gc, num_examples
+  return gc, num_examples, correct_dict
 
 
 def Train(graph, utility, batch_size, train_data, sess, model_dir,
@@ -158,9 +155,9 @@ def Train(graph, utility, batch_size, train_data, sess, model_dir,
     if (i > 0 and i % FLAGS.eval_cycle == 0):
       end = time.time()
       time_taken = end - start
-      print("step ", i, " ", time_taken, " seconds ")
+      print(("step ", i, " ", time_taken, " seconds "))
       start = end
-      print(" printing train set loss: ", train_set_loss / utility.FLAGS.eval_cycle)
+      print((" printing train set loss: ", train_set_loss / utility.FLAGS.eval_cycle))
       train_set_loss = 0.0
 
 
@@ -199,23 +196,23 @@ def master(train_data, dev_data, utility):
         file_list = sorted(list(selected_models.items()), key=lambda x: x[0])
         if (len(file_list) > 0):
           file_list = file_list[0:len(file_list) - 1]
-        print("list of models: ", file_list)
+        print(("list of models: ", file_list))
         for model_file in file_list:
           model_file = model_file[1]
-          print("restoring: ", model_file)
-          saver.restore(sess, model_dir + "/" + model_file)
+          print(("restoring: ", model_file))
+          saver.restore(sess, (model_dir + "/" + model_file).replace('//','/'))
           model_step = int(
               model_file.split("_")[len(model_file.split("_")) - 1])
-          print("evaluating on dev ", model_file, model_step)
+          print(("evaluating on dev ", model_file, model_step))
           evaluate(sess, dev_data, batch_size, graph, model_step)
     else:
       ckpt = tf.train.get_checkpoint_state(model_dir)
-      print("model dir: ", model_dir)
+      print(("model dir: ", model_dir))
       if (not (tf.gfile.IsDirectory(utility.FLAGS.output_dir))):
-        print("create dir: ", utility.FLAGS.output_dir)
+        print(("create dir: ", utility.FLAGS.output_dir))
         tf.gfile.MkDir(utility.FLAGS.output_dir)
       if (not (tf.gfile.IsDirectory(model_dir))):
-        print("create dir: ", model_dir)
+        print(("create dir: ", model_dir))
         tf.gfile.MkDir(model_dir)
       Train(graph, utility, batch_size, train_data, sess, model_dir,
             saver)
@@ -241,9 +238,9 @@ def main(args):
   train_data = data_utils.complete_wiki_processing(train_data, utility, True)
   dev_data = data_utils.complete_wiki_processing(dev_data, utility, False)
   test_data = data_utils.complete_wiki_processing(test_data, utility, False)
-  print("# train examples ", len(train_data))
-  print("# dev examples ", len(dev_data))
-  print("# test examples ", len(test_data))
+  print(("# train examples ", len(train_data)))
+  print(("# dev examples ", len(dev_data)))
+  print(("# test examples ", len(test_data)))
   print("running open source")
   #construct TF graph and train or evaluate
   master(train_data, dev_data, utility)

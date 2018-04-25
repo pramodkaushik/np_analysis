@@ -538,15 +538,15 @@ def add_special_words(utility):
   utility.reverse_word_ids[utility.word_ids[
       utility.entry_match_token]] = utility.entry_match_token
   utility.entry_match_token_id = utility.word_ids[utility.entry_match_token]
-  print("entry match token: ", utility.word_ids[
-      utility.entry_match_token], utility.entry_match_token_id)
+  print(("entry match token: ", utility.word_ids[
+      utility.entry_match_token], utility.entry_match_token_id))
   utility.words.append(utility.column_match_token)
   utility.word_ids[utility.column_match_token] = len(utility.word_ids)
   utility.reverse_word_ids[utility.word_ids[
       utility.column_match_token]] = utility.column_match_token
   utility.column_match_token_id = utility.word_ids[utility.column_match_token]
-  print("entry match token: ", utility.word_ids[
-      utility.column_match_token], utility.column_match_token_id)
+  print(("entry match token: ", utility.word_ids[
+      utility.column_match_token], utility.column_match_token_id))
   utility.words.append(utility.dummy_token)
   utility.word_ids[utility.dummy_token] = len(utility.word_ids)
   utility.reverse_word_ids[utility.word_ids[

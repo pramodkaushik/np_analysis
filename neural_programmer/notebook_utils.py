@@ -18,8 +18,12 @@ import wiki_data, data_utils, parameters, model
 from random import shuffle
 from neural_programmer import Utility, evaluate
 
-def init_data(data_dir):
-    """ Load WikiTableQuestions data """
+def init_data(data_dir, preserve_vocab=False):
+    """ Load WikiTableQuestions data. 
+    preserve_vocab is used when perturbed data is loaded, 
+    in which case special words are given hard-coded ids
+    to match that of the unperturbed data case
+    """
     utility = Utility()
     train_name = "random-split-1-train.examples"
     dev_name = "random-split-1-dev.examples"
@@ -35,14 +39,51 @@ def init_data(data_dir):
     data_utils.construct_vocab(dev_data, utility, True)
     data_utils.construct_vocab(test_data, utility, True)
     data_utils.add_special_words(utility)
+# set absolute word_ids for special words
+    if preserve_vocab:
+        print("hardcoded ids for special words")
+        word_to_swap = utility.reverse_word_ids[9133]
+        word_id_to_swap = utility.word_ids[utility.entry_match_token]
+        utility.word_ids[word_to_swap] = utility.word_ids[utility.entry_match_token]
+        utility.word_ids[utility.entry_match_token] = 9133
+        utility.entry_match_token_id = utility.word_ids[utility.entry_match_token]
+        utility.reverse_word_ids[word_id_to_swap] = word_to_swap
+        utility.reverse_word_ids[9133] = utility.entry_match_token
+
+        word_to_swap = utility.reverse_word_ids[9134]
+        word_id_to_swap = utility.word_ids[utility.column_match_token]
+        utility.word_ids[word_to_swap] = utility.word_ids[utility.column_match_token]
+        utility.word_ids[utility.column_match_token] = 9134
+        utility.column_match_token_id = utility.word_ids[utility.column_match_token]
+        utility.reverse_word_ids[word_id_to_swap] = word_to_swap
+        utility.reverse_word_ids[9134] = utility.column_match_token
+
+        word_to_swap = utility.reverse_word_ids[9135]
+        word_id_to_swap = utility.word_ids[utility.dummy_token]
+        utility.word_ids[word_to_swap] = utility.word_ids[utility.dummy_token]
+        utility.word_ids[utility.dummy_token] = 9135
+        utility.dummy_token_id = utility.word_ids[utility.dummy_token]
+        utility.reverse_word_ids[word_id_to_swap] = word_to_swap
+        utility.reverse_word_ids[9135] = utility.dummy_token
+
+        word_to_swap = utility.reverse_word_ids[9136]
+        word_id_to_swap = utility.word_ids[utility.unk_token]
+        utility.word_ids[word_to_swap] = utility.word_ids[utility.unk_token]
+        utility.word_ids[utility.unk_token] = 9136
+        utility.unk_token_id = utility.word_ids[utility.unk_token]
+        utility.reverse_word_ids[word_id_to_swap] = word_to_swap
+        utility.reverse_word_ids[9136] = utility.unk_token
+
+        print(utility.entry_match_token_id, utility.column_match_token_id, utility.dummy_token_id, utility.unk_token_id)
+
     data_utils.perform_word_cutoff(utility)
     # convert data to int format and pad the inputs
     train_data = data_utils.complete_wiki_processing(train_data, utility, True)
     dev_data = data_utils.complete_wiki_processing(dev_data, utility, False)
     test_data = data_utils.complete_wiki_processing(test_data, utility, False)
-    print("# train examples ", len(train_data))
-    print("# dev examples ", len(dev_data))
-    print("# test examples ", len(test_data))
+    print(("# train examples ", len(train_data)))
+    print(("# dev examples ", len(dev_data)))
+    print(("# test examples ", len(test_data)))
     return train_data, dev_data, test_data, utility
 
 def build_graph(utility):

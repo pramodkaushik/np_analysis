@@ -303,7 +303,7 @@ class WikiQuestionGenerator(object):
             question_id, question, target_canon, context)
         self.annotated_tables[context] = []
       counter += 1
-    print("Annotated examples loaded ", len(self.annotated_examples))
+    print(("Annotated examples loaded ", len(self.annotated_examples)))
     f.close()
 
   def is_number_column(self, a):
