@@ -18,19 +18,28 @@ import wiki_data, data_utils, parameters, model
 from random import shuffle
 from neural_programmer import Utility, evaluate
 
-def init_data(data_dir, preserve_vocab=False):
+def init_data(data_dir, preserve_vocab=False, 
+        split_filenames = {
+            'train': 'random-split-1-train.examples', 
+            'dev': 'random-split-1-dev.examples', 
+            'test': 'pristine-unseen-tables.examples'
+            }, 
+        annotated_filenames = {
+            'train': 'training.annotated',
+            'test': 'pristine-unseen-tables.annotated'
+            }):
     """ Load WikiTableQuestions data. 
     preserve_vocab is used when perturbed data is loaded, 
     in which case special words are given hard-coded ids
     to match that of the unperturbed data case
     """
     utility = Utility()
-    train_name = "random-split-1-train.examples"
-    dev_name = "random-split-1-dev.examples"
-    test_name = "pristine-unseen-tables.examples"
+    train_name = split_filenames['train']
+    dev_name = split_filenames['dev']
+    test_name = split_filenames['test']
     # load data
     dat = wiki_data.WikiQuestionGenerator(train_name, dev_name, test_name, data_dir)
-    train_data, dev_data, test_data = dat.load()
+    train_data, dev_data, test_data = dat.load(annotated_filenames)
     utility.words = []
     utility.word_ids = {}
     utility.reverse_word_ids = {}
@@ -149,7 +158,9 @@ def evaluate_concatenation_attack(sess, data, batch_size, graph, model_step, uti
         question_begin = np.nonzero(
             wiki_example.question_attention_mask)[0].shape[0]
         if suffix:
-            new_data[i].question.extend(ids)
+            word_ids = [w for w in new_data[i].question if w not in [utility.entry_match_token_id, utility.column_match_token_id]]
+            addnl_token_ids = [w for w in new_data[i].question if w in [utility.entry_match_token_id, utility.column_match_token_id]]
+            new_data[i].question = word_ids + ids + addnl_token_ids
             new_data[i].question = new_data[i].question[len(ids):]
 
             new_data[i].question_attention_mask.extend([0] * len(ids))

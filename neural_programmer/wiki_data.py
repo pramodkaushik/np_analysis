@@ -506,12 +506,12 @@ class WikiQuestionGenerator(object):
                                                            number_column_indices]
       example.word_lookup_matrix = example.lookup_matrix[:, word_column_indices]
 
-  def load(self):
+  def load(self, filenames = {'train': 'training.annotated', 'test': 'pristine-unseen-tables.annotated'}):
     train_data = []
     dev_data = []
     test_data = []
     self.load_annotated_data(
-        os.path.join(self.data_folder, "training.annotated"))
+        os.path.join(self.data_folder, filenames['train']))
     self.load_annotated_tables()
     self.answer_classification()
     self.train_loader.load()
@@ -525,7 +525,7 @@ class WikiQuestionGenerator(object):
       dev_data.append(self.annotated_examples[example])
 
     self.load_annotated_data(
-        os.path.join(self.data_folder, "pristine-unseen-tables.annotated"))
+        os.path.join(self.data_folder, filenames['test']))
     self.load_annotated_tables()
     self.answer_classification()
     self.test_loader.load()
