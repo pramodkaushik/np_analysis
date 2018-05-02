@@ -86,6 +86,7 @@ def init_data(data_dir, preserve_vocab=False,
         print(utility.entry_match_token_id, utility.column_match_token_id, utility.dummy_token_id, utility.unk_token_id)
 
     data_utils.perform_word_cutoff(utility)
+    unprocessed_dev_data = copy.deepcopy(dev_data)
     # convert data to int format and pad the inputs
     train_data = data_utils.complete_wiki_processing(train_data, utility, True)
     dev_data = data_utils.complete_wiki_processing(dev_data, utility, False)
@@ -93,7 +94,7 @@ def init_data(data_dir, preserve_vocab=False,
     print(("# train examples ", len(train_data)))
     print(("# dev examples ", len(dev_data)))
     print(("# test examples ", len(test_data)))
-    return train_data, dev_data, test_data, utility
+    return train_data, dev_data, test_data, utility, unprocessed_dev_data
 
 def build_graph(utility):
     """ Build Neural Programmer graph """
@@ -150,11 +151,16 @@ def rename(word):
 def process_table_key(key):
     return re.sub(r'csv/([0-9]*)-csv/([0-9]*).csv', r'\1_\2', key)
 
-def evaluate_concatenation_attack(sess, data, batch_size, graph, model_step, utility, phrase, suffix=False):
+def evaluate_concatenation_attack(sess, data, batch_size, graph, model_step, utility, phrase, attack_only_correct=False, suffix=False):
     ids = [utility.word_ids[w] if w in utility.word_ids else utility.word_ids[utility.unk_token] for w in phrase.split()]
     print(ids)
     new_data = copy.deepcopy(data)
+    num_attacked = 0
     for i, wiki_example in enumerate(new_data):
+        if attack_only_correct:
+            if not attack_only_correct[wiki_example.question_id]:
+                continue
+        num_attacked += 1
         question_begin = np.nonzero(
             wiki_example.question_attention_mask)[0].shape[0]
         if suffix:
@@ -168,4 +174,5 @@ def evaluate_concatenation_attack(sess, data, batch_size, graph, model_step, uti
         else:
             new_data[i].question[question_begin-len(ids):question_begin] = ids
             new_data[i].question_attention_mask[question_begin-len(ids):question_begin] = [0] * len(ids)
+    print("Num questions attacked:", num_attacked)
     return evaluate(sess, new_data, batch_size, graph, model_step)
