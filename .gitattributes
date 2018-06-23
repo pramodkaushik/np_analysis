@@ -1,4 +1,0 @@
-wtq_data.zip filter=lfs diff=lfs merge=lfs -text
-perturbed_wtq_data.zip filter=lfs diff=lfs merge=lfs -text
-pretrained_model.zip filter=lfs diff=lfs merge=lfs -text
-results.zip filter=lfs diff=lfs merge=lfs -text
