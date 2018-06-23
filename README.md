@@ -19,11 +19,11 @@ Mudrakarta**[pramodkm@uchicago.edu](mailto:pramodkm@uchicago.edu)
 
 Mudrakarta, Pramod Kaushik, Ankur Taly, Mukund Sundararajan, and Kedar Dhamdhere. "Did the Model Understand the Question?." arXiv preprint arXiv:1805.05492 (2018).
 
-'''
+```
 @article{mudrakarta2018did,
   title={Did the Model Understand the Question?},
   author={Mudrakarta, Pramod Kaushik and Taly, Ankur and Sundararajan, Mukund and Dhamdhere, Kedar},
   journal={arXiv preprint arXiv:1805.05492},
   year={2018}
 }
-'''
+```
